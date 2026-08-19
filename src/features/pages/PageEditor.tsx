@@ -83,7 +83,7 @@ function PageEditor({
   return (
     <>
       <div className="w-full flex flex-col items-center">
-        <div className="mx-auto w-full max-w-7xl px-8 pb-10 pt-12 relative">
+        <div className="mx-auto w-full max-w-7xl px-4 pb-8 pt-6 md:px-8 md:pb-10 md:pt-12 relative">
           {/* Page Header */}
           <div className="group/header relative mb-8 border-b border-app-border pb-6">
             <div className="flex items-center gap-1.5 text-xs text-app-muted mb-2">
@@ -97,7 +97,7 @@ function PageEditor({
               placeholder="Tên trang không có tiêu đề"
               onChange={(html) => setLocalTitle(html)}
               onBlur={handleUpdateTitle}
-              className="w-full bg-transparent text-4xl font-bold tracking-tight text-app-text outline-none placeholder:text-app-muted/30"
+              className="w-full bg-transparent text-3xl md:text-4xl font-bold tracking-tight text-app-text outline-none placeholder:text-app-muted/30"
             />
           </div>
 

@@ -35,6 +35,8 @@ interface SidebarProps {
   onEditWorkspace: (workspace: Workspace) => void
   onDeleteWorkspace: (workspace: Workspace) => void
   onSelectPage: (pageId: string) => void
+  isOpen?: boolean
+  onClose?: () => void
 }
 
 // Generates a consistent hue from a string
@@ -72,6 +74,8 @@ function Sidebar({
   onEditWorkspace,
   onDeleteWorkspace,
   onSelectPage,
+  isOpen,
+  onClose,
 }: SidebarProps) {
   const [search, setSearch] = useState('')
   const [openMenuId, setOpenMenuId] =
@@ -192,14 +196,27 @@ function Sidebar({
 
   return (
     <>
+      {/* Menu Backdrop */}
       {openMenuId && (
         <div
-          className="fixed inset-0 z-10"
+          className="fixed inset-0 z-50"
           onClick={handleBackdropClick}
         />
       )}
 
-      <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg">
+      {/* Mobile Sidebar Backdrop */}
+      <div
+        className={`fixed inset-0 z-30 bg-black/50 transition-opacity md:hidden ${
+          isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        onClick={onClose}
+      />
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar-bg transition-transform duration-300 md:static md:translate-x-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         {/* ─── Header ─── */}
         <div className="flex h-14 items-center gap-3 border-b border-sidebar-border px-4">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-general to-blue-600 text-sm font-bold text-white shadow-sm">
@@ -258,6 +275,7 @@ function Sidebar({
                     onClick={() => {
                       onSelectWorkspace(workspace)
                       setOpenMenuId(null)
+                      onClose?.()
                     }}
                     className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 pr-8 text-left text-sm transition ${
                       isActive
@@ -451,6 +469,7 @@ function Sidebar({
                               onClick={() => {
                                 onSelectPage(page.id)
                                 setOpenMenuId(null)
+                                onClose?.()
                               }}
                               className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 pr-7 text-left text-xs transition ${
                                 activePageId === page.id

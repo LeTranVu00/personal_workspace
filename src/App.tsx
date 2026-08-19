@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { LayoutGrid, Plus } from 'lucide-react'
+import { LayoutGrid, Plus, Menu } from 'lucide-react'
 import WorkspaceView from './features/workspaces/WorkspaceView'
 import Sidebar from './components/layout/Sidebar'
 import ConfirmDialog from './components/common/ConfirmDialog'
@@ -21,6 +21,8 @@ function App() {
 
   const [activeWorkspaceId, setActiveWorkspaceId] =
     useState<string | null>(() => localStorage.getItem('activeWorkspaceId'))
+
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
   useEffect(() => {
     if (activeWorkspaceId) {
@@ -111,6 +113,8 @@ function App() {
         workspaces={workspaces}
         activeWorkspaceId={activeWorkspaceId}
         activePageId={activePageId}
+        isOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
         onSelectWorkspace={(workspace) => {
           setActiveWorkspaceId(workspace.id)
           setActivePageId(null)
@@ -136,8 +140,15 @@ function App() {
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-app-border bg-white px-5">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-app-border bg-white px-3 md:px-5">
           <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="mr-1 rounded-md p-1.5 text-app-muted hover:bg-app-hover md:hidden"
+            >
+              <Menu size={18} />
+            </button>
             {activeWorkspace ? (
               <>
                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-general text-[11px] font-bold text-white">
