@@ -2,17 +2,26 @@
 
 @theme {
   --color-general: #0068FF;
+  --color-general-dark: #0052CC;
+  --color-general-light: #EBF3FF;
 
-  --color-app-bg: #FFFFFF;
-  --color-app-surface: #F8FAFC;
+  --color-app-bg: #FAFBFC;
+  --color-app-surface: #F1F5F9;
+  --color-app-surface-2: #F8FAFC;
 
   --color-app-text: #0F172A;
   --color-app-muted: #64748B;
+  --color-app-muted-2: #94A3B8;
 
   --color-app-border: #E2E8F0;
+  --color-app-border-2: #CBD5E1;
   --color-app-hover: #F1F5F9;
+
+  --color-sidebar-bg: #FFFFFF;
+  --color-sidebar-border: #E8ECF0;
 }
 
+/* ─── Base ─── */
 html,
 body,
 #root {
@@ -22,11 +31,11 @@ body,
 
 body {
   margin: 0;
-  background: #FFFFFF;
+  background: var(--color-app-bg);
   color: #0F172A;
 
   font-family:
-    Inter,
+    'Inter',
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
@@ -34,6 +43,7 @@ body {
     sans-serif;
 
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
@@ -49,4 +59,87 @@ select {
 
 button {
   cursor: pointer;
+}
+
+/* ─── Animations ─── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in   { animation: fade-in  0.15s ease-out; }
+.animate-slide-up  { animation: slide-up 0.2s  ease-out; }
+.animate-scale-in  { animation: scale-in 0.15s ease-out; }
+.animate-slide-down { animation: slide-down 0.15s ease-out; }
+
+/* ─── Custom Scrollbar ─── */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 99px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Sidebar scrollbar */
+aside::-webkit-scrollbar {
+  width: 3px;
+}
+aside::-webkit-scrollbar-track {
+  background: transparent;
+}
+aside::-webkit-scrollbar-thumb {
+  background: #E2E8F0;
+  border-radius: 99px;
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: rgba(0, 104, 255, 0.15);
+  color: inherit;
+}
+
+/* ─── TipTap Editor ─── */
+.ProseMirror {
+  outline: none;
+}
+.ProseMirror p {
+  margin: 0;
+}
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #94A3B8;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.ProseMirror strong {
+  font-weight: 700;
+}
+.ProseMirror em {
+  font-style: italic;
+}
+.ProseMirror s {
+  text-decoration: line-through;
 }

@@ -1,14 +1,25 @@
 import TableBlockEditor from './table/TableBlockEditor'
+import RichTextEditor from './RichTextEditor'
 import {
   useEffect,
   useState,
 } from 'react'
 
 import {
+  AlignLeft,
   ChevronDown,
   ChevronUp,
+  Code,
   ExternalLink,
+  FileText,
+  GripVertical,
+  Heading,
+  Link,
+  ListChecks,
+  NotepadText,
   Plus,
+  Quote,
+  Table2,
   Trash2,
 } from 'lucide-react'
 
@@ -28,6 +39,29 @@ import type {
 import { blockRepository } from '../../db/repositories/blockRepository'
 
 import { generateId } from '../../utils/generateId'
+
+// Block type icon map
+const BLOCK_ICONS: Record<string, React.ElementType> = {
+  text:      FileText,
+  heading:   Heading,
+  note:      NotepadText,
+  quote:     Quote,
+  code:      Code,
+  checklist: ListChecks,
+  link:      Link,
+  table:     Table2,
+}
+
+const BLOCK_ICON_COLORS: Record<string, string> = {
+  text:      'text-slate-400',
+  heading:   'text-blue-400',
+  note:      'text-amber-400',
+  quote:     'text-violet-400',
+  code:      'text-emerald-400',
+  checklist: 'text-green-400',
+  link:      'text-sky-400',
+  table:     'text-indigo-400',
+}
 
 interface BlockEditorProps {
   block: Block
@@ -72,6 +106,9 @@ function BlockEditor({
     )
   }
 
+  const BlockIcon = BLOCK_ICONS[block.type] ?? FileText
+  const blockIconColor = BLOCK_ICON_COLORS[block.type] ?? 'text-slate-400'
+
   const renderContent = () => {
     switch (block.type) {
       case 'heading': {
@@ -79,17 +116,16 @@ function BlockEditor({
           content as HeadingBlockContent
 
         return (
-          <input
-            type="text"
-            value={current.text}
+          <RichTextEditor
+            content={current.text}
             placeholder="Tiêu đề..."
-            onChange={(event) =>
+            onChange={(html) =>
               setContent({
-                text: event.target.value,
+                text: html,
               })
             }
             onBlur={saveCurrent}
-            className="w-full bg-transparent text-2xl font-semibold outline-none placeholder:text-slate-300"
+            className="text-2xl font-bold leading-tight text-app-text"
           />
         )
       }
@@ -99,17 +135,16 @@ function BlockEditor({
           content as TextBlockContent
 
         return (
-          <textarea
-            value={current.text}
+          <RichTextEditor
+            content={current.text}
             placeholder="Nhập nội dung..."
-            rows={3}
-            onChange={(event) =>
+            onChange={(html) =>
               setContent({
-                text: event.target.value,
+                text: html,
               })
             }
             onBlur={saveCurrent}
-            className="w-full resize-y bg-transparent text-sm leading-7 outline-none placeholder:text-slate-300"
+            className="text-sm leading-7 text-app-text"
           />
         )
       }
@@ -119,18 +154,21 @@ function BlockEditor({
           content as NoteBlockContent
 
         return (
-          <div className="rounded-xl border border-general/20 bg-general/5 p-4">
-            <textarea
-              value={current.text}
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="mb-2 flex items-center gap-1.5">
+              <NotepadText size={14} className="text-amber-500" />
+              <span className="text-xs font-semibold text-amber-600">Ghi chú</span>
+            </div>
+            <RichTextEditor
+              content={current.text}
               placeholder="Viết ghi chú..."
-              rows={3}
-              onChange={(event) =>
+              onChange={(html) =>
                 setContent({
-                  text: event.target.value,
+                  text: html,
                 })
               }
               onBlur={saveCurrent}
-              className="w-full resize-y bg-transparent text-sm leading-6 outline-none placeholder:text-app-muted"
+              className="text-sm leading-6 text-amber-900"
             />
           </div>
         )
@@ -141,19 +179,21 @@ function BlockEditor({
           content as QuoteBlockContent
 
         return (
-          <div className="border-l-4 border-general pl-4 py-1 italic">
-            <textarea
-              value={current.text}
-              placeholder="Nhập trích dẫn..."
-              rows={2}
-              onChange={(event) =>
-                setContent({
-                  text: event.target.value,
-                })
-              }
-              onBlur={saveCurrent}
-              className="w-full resize-y bg-transparent text-lg text-app-muted outline-none"
-            />
+          <div className="flex gap-3 rounded-r-xl border-l-4 border-violet-400 bg-violet-50/50 py-3 pl-4 pr-3">
+            <div className="flex-1">
+              <RichTextEditor
+                content={current.text}
+                placeholder="Nhập trích dẫn..."
+                onChange={(html) =>
+                  setContent({
+                    text: html,
+                  })
+                }
+                onBlur={saveCurrent}
+                className="text-base italic text-violet-800"
+              />
+            </div>
+            <Quote size={18} className="mt-0.5 shrink-0 text-violet-300" />
           </div>
         )
       }
@@ -163,34 +203,44 @@ function BlockEditor({
           content as CodeBlockContent
 
         return (
-          <div className="rounded-xl bg-slate-900 p-4 font-mono text-sm">
-            <input
-              type="text"
-              value={current.language}
-              onChange={(event) =>
-                setContent({
-                  ...current,
-                  language: event.target.value,
-                })
-              }
-              onBlur={saveCurrent}
-              className="mb-2 w-32 bg-transparent text-xs text-slate-400 outline-none placeholder:text-slate-600"
-              placeholder="language"
-            />
-            <textarea
-              value={current.code}
-              placeholder="Mã nguồn..."
-              rows={4}
-              onChange={(event) =>
-                setContent({
-                  ...current,
-                  code: event.target.value,
-                })
-              }
-              onBlur={saveCurrent}
-              className="w-full resize-y bg-transparent text-slate-100 outline-none"
-              spellCheck={false}
-            />
+          <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 font-mono text-sm">
+            {/* Language bar */}
+            <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2">
+              <input
+                type="text"
+                value={current.language}
+                onChange={(event) =>
+                  setContent({
+                    ...current,
+                    language: event.target.value,
+                  })
+                }
+                onBlur={saveCurrent}
+                className="w-28 bg-transparent text-xs text-emerald-400 outline-none"
+                placeholder="language"
+              />
+              <div className="flex items-center gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-full bg-red-500/70" />
+                <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/70" />
+                <div className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
+              </div>
+            </div>
+            <div className="p-4">
+              <textarea
+                value={current.code}
+                placeholder="// Mã nguồn..."
+                rows={5}
+                onChange={(event) =>
+                  setContent({
+                    ...current,
+                    code: event.target.value,
+                  })
+                }
+                onBlur={saveCurrent}
+                className="w-full resize-y bg-transparent text-slate-100 outline-none placeholder:text-slate-600"
+                spellCheck={false}
+              />
+            </div>
           </div>
         )
       }
@@ -268,13 +318,31 @@ function BlockEditor({
           await save(nextContent)
         }
 
+        const doneCount = current.items.filter(i => i.checked).length
+        const total = current.items.length
+
         return (
-          <div className="space-y-2">
+          <div className="space-y-1">
+            {/* Progress bar */}
+            {total > 0 && (
+              <div className="mb-3 flex items-center gap-2">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-app-surface">
+                  <div
+                    className="h-full rounded-full bg-green-500 transition-all duration-300"
+                    style={{ width: `${(doneCount / total) * 100}%` }}
+                  />
+                </div>
+                <span className="text-[11px] font-medium text-app-muted">
+                  {doneCount}/{total}
+                </span>
+              </div>
+            )}
+
             {current.items.map(
               (item) => (
                 <div
                   key={item.id}
-                  className="group/item flex items-center gap-3"
+                  className="group/item flex items-center gap-2.5 rounded-lg px-1 py-1 transition hover:bg-app-hover"
                 >
                   <input
                     type="checkbox"
@@ -286,31 +354,18 @@ function BlockEditor({
                         item.id,
                       )
                     }
-                    className="h-4 w-4 accent-[#0068FF]"
+                    className="h-4 w-4 shrink-0 accent-green-500"
                   />
 
-                  <input
-                    type="text"
-                    value={item.text}
-                    placeholder="Việc cần làm..."
-                    onChange={(
-                      event,
-                    ) =>
-                      updateItemText(
-                        item.id,
-                        event.target
-                          .value,
-                      )
-                    }
-                    onBlur={
-                      saveCurrent
-                    }
-                    className={`min-w-0 flex-1 bg-transparent text-sm outline-none ${
-                      item.checked
-                        ? 'text-app-muted line-through'
-                        : ''
-                    }`}
-                  />
+                  <div className={`min-w-0 flex-1 ${item.checked ? 'text-app-muted line-through opacity-60' : ''}`}>
+                    <RichTextEditor
+                      content={item.text}
+                      placeholder="Việc cần làm..."
+                      onChange={(html) => updateItemText(item.id, html)}
+                      onBlur={saveCurrent}
+                      className="text-sm leading-6"
+                    />
+                  </div>
 
                   <button
                     type="button"
@@ -322,7 +377,7 @@ function BlockEditor({
                     className="rounded-md p-1 text-app-muted opacity-0 transition hover:bg-red-50 hover:text-red-500 group-hover/item:opacity-100"
                   >
                     <Trash2
-                      size={14}
+                      size={13}
                     />
                   </button>
                 </div>
@@ -332,9 +387,9 @@ function BlockEditor({
             <button
               type="button"
               onClick={addItem}
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-app-muted transition hover:bg-app-hover hover:text-general"
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-app-muted transition hover:bg-app-hover hover:text-green-600"
             >
-              <Plus size={14} />
+              <Plus size={13} />
               Thêm mục
             </button>
           </div>
@@ -375,53 +430,47 @@ function BlockEditor({
         }
 
         return (
-          <div className="rounded-xl border border-app-border p-4">
-            <input
-              type="text"
-              value={
-                current.label
-              }
-              placeholder="Tên liên kết"
-              onChange={(event) =>
-                setContent({
-                  ...current,
-                  label:
-                    event.target
-                      .value,
-                })
-              }
-              onBlur={saveCurrent}
-              className="w-full bg-transparent text-sm font-medium outline-none"
-            />
-
-            <input
-              type="text"
-              value={current.url}
-              placeholder="https://..."
-              onChange={(event) =>
-                setContent({
-                  ...current,
-                  url: event.target
-                    .value,
-                })
-              }
-              onBlur={saveCurrent}
-              className="mt-2 w-full bg-transparent text-xs text-app-muted outline-none"
-            />
-
-            {safeUrl && (
-              <a
-                href={safeUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-general hover:underline"
-              >
-                Mở liên kết
-                <ExternalLink
-                  size={13}
+          <div className="group/link overflow-hidden rounded-xl border border-app-border bg-white transition hover:border-sky-200 hover:shadow-sm">
+            <div className="flex items-center gap-2 border-b border-app-border bg-app-surface/50 px-4 py-2.5">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-sky-100">
+                <Link size={13} className="text-sky-500" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <RichTextEditor
+                  content={current.label}
+                  placeholder="Tên liên kết"
+                  onChange={(html) => setContent({ ...current, label: html })}
+                  onBlur={saveCurrent}
+                  className="text-sm font-medium"
                 />
-              </a>
-            )}
+              </div>
+              {safeUrl && (
+                <a
+                  href={safeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ml-auto shrink-0 rounded-lg p-1 text-sky-500 transition hover:bg-sky-50"
+                >
+                  <ExternalLink size={14} />
+                </a>
+              )}
+            </div>
+            <div className="px-4 py-2.5">
+              <input
+                type="text"
+                value={current.url}
+                placeholder="https://..."
+                onChange={(event) =>
+                  setContent({
+                    ...current,
+                    url: event.target
+                      .value,
+                  })
+                }
+                onBlur={saveCurrent}
+                className="w-full bg-transparent text-xs text-app-muted outline-none"
+              />
+            </div>
           </div>
         )
       }
@@ -438,36 +487,46 @@ function BlockEditor({
   }
 
   return (
-    <div className="group relative rounded-xl border border-transparent px-3 py-3 transition hover:border-app-border">
-      <div className="absolute right-2 top-2 z-10 flex items-center rounded-lg border border-app-border bg-white p-0.5 opacity-0 shadow-sm transition group-hover:opacity-100">
-        <button
-          type="button"
-          disabled={isFirst}
-          onClick={onMoveUp}
-          title="Di chuyển lên"
-          className="rounded-md p-1.5 text-app-muted hover:bg-app-hover disabled:opacity-30"
-        >
-          <ChevronUp size={15} />
-        </button>
+    <div className="group/block relative rounded-xl px-3 py-2 transition">
+      {/* Block type indicator — left side */}
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-5 opacity-0 transition group-hover/block:opacity-100">
+        <BlockIcon size={14} className={blockIconColor} />
+      </div>
 
-        <button
-          type="button"
-          disabled={isLast}
-          onClick={onMoveDown}
-          title="Di chuyển xuống"
-          className="rounded-md p-1.5 text-app-muted hover:bg-app-hover disabled:opacity-30"
-        >
-          <ChevronDown size={15} />
-        </button>
+      {/* Toolbar — above the block content */}
+      <div className="mb-1.5 flex h-7 items-center justify-end gap-0.5 opacity-0 transition group-hover/block:opacity-100">
+        <div className="flex items-center gap-0.5 rounded-lg border border-app-border bg-white p-0.5 shadow-sm">
+          <button
+            type="button"
+            disabled={isFirst}
+            onClick={onMoveUp}
+            title="Di chuyển lên"
+            className="rounded-md p-1.5 text-app-muted transition hover:bg-app-hover disabled:opacity-30"
+          >
+            <ChevronUp size={14} />
+          </button>
 
-        <button
-          type="button"
-          onClick={onDelete}
-          title="Xóa Block"
-          className="rounded-md p-1.5 text-app-muted hover:bg-red-50 hover:text-red-500"
-        >
-          <Trash2 size={15} />
-        </button>
+          <button
+            type="button"
+            disabled={isLast}
+            onClick={onMoveDown}
+            title="Di chuyển xuống"
+            className="rounded-md p-1.5 text-app-muted transition hover:bg-app-hover disabled:opacity-30"
+          >
+            <ChevronDown size={14} />
+          </button>
+
+          <div className="mx-0.5 h-4 w-px bg-app-border" />
+
+          <button
+            type="button"
+            onClick={onDelete}
+            title="Xóa Block"
+            className="rounded-md p-1.5 text-app-muted transition hover:bg-red-50 hover:text-red-500"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
 
       {renderContent()}

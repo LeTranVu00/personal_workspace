@@ -16,42 +16,52 @@ export const blockRepository = {
   async create(
     pageId: string,
     type: BlockType,
+    afterBlockId?: string | null,
   ): Promise<Block> {
     const blocks = await db.blocks
       .where('pageId')
       .equals(pageId)
-      .toArray()
+      .sortBy('order')
 
-    const maxOrder =
-      blocks.length > 0
-        ? Math.max(
-            ...blocks.map(
-              (block) => block.order,
-            ),
-          )
-        : -1
+    let newOrder = 0
+
+    if (afterBlockId) {
+      const afterBlock = blocks.find((b) => b.id === afterBlockId)
+      if (afterBlock) {
+        newOrder = afterBlock.order + 1
+      } else {
+        newOrder = blocks.length > 0 ? blocks[blocks.length - 1].order + 1 : 0
+      }
+    } else if (afterBlockId === null) {
+      newOrder = blocks.length > 0 ? blocks[0].order : 0
+    } else {
+      newOrder = blocks.length > 0 ? blocks[blocks.length - 1].order + 1 : 0
+    }
 
     const now = Date.now()
 
     const block: Block = {
       id: generateId('block'),
-
       pageId,
-
       type,
-
       content:
         createDefaultBlockContent(
           type,
         ) as BlockContent,
-
-      order: maxOrder + 1,
-
+      order: newOrder,
       createdAt: now,
       updatedAt: now,
     }
 
-    await db.blocks.add(block)
+    await db.transaction('rw', db.blocks, async () => {
+      // Shift blocks down to make room
+      const blocksToShift = blocks.filter((b) => b.order >= newOrder)
+      for (const b of blocksToShift) {
+        await db.blocks.update(b.id, { order: b.order + 1 })
+      }
+
+      await db.blocks.add(block)
+    })
 
     return block
   },

@@ -37,10 +37,10 @@ export const pageRepository = {
 
   async update(
     id: string,
-    title: string,
+    updates: Partial<Pick<Page, 'title'>>,
   ): Promise<void> {
     await db.pages.update(id, {
-      title: title.trim(),
+      ...(updates.title !== undefined && { title: updates.title.trim() }),
       updatedAt: Date.now(),
     })
   },

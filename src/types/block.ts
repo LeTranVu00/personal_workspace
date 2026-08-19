@@ -59,6 +59,8 @@ export interface TableColumn {
   type: TableCellType
 
   options?: string[]
+
+  width?: number
 }
 
 export interface TableRow {

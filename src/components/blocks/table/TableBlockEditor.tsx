@@ -1,6 +1,11 @@
-import { useState } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import {
   ExternalLink,
+  Hash,
   Pencil,
   Plus,
   Trash2,
@@ -24,6 +29,7 @@ import type {
 import { generateId } from '../../../utils/generateId'
 
 import TableColumnModal from './TableColumnModal'
+import RichTextEditor from '../RichTextEditor'
 
 interface TableBlockEditorProps {
   content: TableBlockContent
@@ -31,6 +37,21 @@ interface TableBlockEditorProps {
   onChange: (
     content: TableBlockContent,
   ) => Promise<void> | void
+}
+
+// Per column-type badge colors
+const COL_TYPE_COLORS: Record<string, string> = {
+  text:        'bg-slate-100 text-slate-600',
+  longText:    'bg-slate-100 text-slate-600',
+  number:      'bg-blue-50 text-blue-600',
+  checkbox:    'bg-green-50 text-green-600',
+  date:        'bg-purple-50 text-purple-600',
+  select:      'bg-orange-50 text-orange-600',
+  multiSelect: 'bg-amber-50 text-amber-600',
+  link:        'bg-sky-50 text-sky-600',
+  checklist:   'bg-emerald-50 text-emerald-600',
+  note:        'bg-yellow-50 text-yellow-600',
+  quote:       'bg-violet-50 text-violet-600',
 }
 
 function TableBlockEditor({
@@ -42,6 +63,49 @@ function TableBlockEditor({
 
   const [editingColumn, setEditingColumn] =
     useState<TableColumn | undefined>()
+
+  // Column resizing state
+  const [resizingColId, setResizingColId] = useState<string | null>(null)
+  const [startWidth, setStartWidth] = useState(0)
+  const [startX, setStartX] = useState(0)
+  const [tempWidths, setTempWidths] = useState<Record<string, number>>({})
+  const colRefs = useRef<Record<string, HTMLTableCellElement | null>>({})
+
+  useEffect(() => {
+    if (!resizingColId) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const delta = e.clientX - startX
+      setTempWidths((prev) => ({
+        ...prev,
+        [resizingColId]: Math.max(40, startWidth + delta), // minimum width 40px
+      }))
+    }
+
+    const handleMouseUp = () => {
+      setTempWidths((prev) => {
+        const finalWidth = prev[resizingColId]
+        if (finalWidth) {
+          const nextContent: TableBlockContent = {
+            ...content,
+            columns: content.columns.map((col) =>
+              col.id === resizingColId ? { ...col, width: finalWidth } : col
+            ),
+          }
+          void onChange(nextContent)
+        }
+        return {}
+      })
+      setResizingColId(null)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [resizingColId, startX, startWidth, content, onChange])
 
   const updateCell = (
     rowId: string,
@@ -68,17 +132,48 @@ function TableBlockEditor({
     void onChange(nextContent)
   }
 
+  const resetColumnWidth = (columnId: string) => {
+    const nextContent: TableBlockContent = {
+      ...content,
+      columns: content.columns.map((col) =>
+        col.id === columnId ? { ...col, width: undefined } : col
+      ),
+    }
+    void onChange(nextContent)
+    // Also clear from tempWidths
+    setTempWidths((prev) => {
+      const next = { ...prev }
+      delete next[columnId]
+      return next
+    })
+  }
+
   const addRow = () => {
     if (content.columns.length === 0) {
       return
     }
 
+    let nextRowIndex = 1
+    const firstCol = content.columns[0]
+    if (firstCol && firstCol.type === 'number') {
+      let maxNumber = 0
+      content.rows.forEach((row) => {
+        const val = row.cells[firstCol.id]
+        if (typeof val === 'number' && val > maxNumber) {
+          maxNumber = val
+        }
+      })
+      nextRowIndex = maxNumber + 1
+    }
+
     const cells = Object.fromEntries(
-      content.columns.map((column) => [
+      content.columns.map((column, colIndex) => [
         column.id,
-        createDefaultCellValue(
-          column.type,
-        ) as TableCellValue,
+        colIndex === 0 && column.type === 'number'
+          ? nextRowIndex
+          : (createDefaultCellValue(
+              column.type,
+            ) as TableCellValue),
       ]),
     )
 
@@ -114,9 +209,6 @@ function TableBlockEditor({
     type: TableCellType,
     options: string[],
   ) => {
-    /*
-     * EDIT COLUMN
-     */
     if (editingColumn) {
       const oldType =
         editingColumn.type
@@ -142,11 +234,6 @@ function TableBlockEditor({
               : column,
         ),
 
-        /*
-         * Nếu đổi TYPE của cột:
-         * tự reset toàn bộ Cell
-         * sang default value mới.
-         */
         rows: content.rows.map(
           (row) => ({
             ...row,
@@ -174,9 +261,6 @@ function TableBlockEditor({
       return
     }
 
-    /*
-     * CREATE COLUMN
-     */
     const columnId =
       generateId('col')
 
@@ -197,10 +281,6 @@ function TableBlockEditor({
         column,
       ],
 
-      /*
-       * Tự thêm Cell tương ứng
-       * cho TẤT CẢ row hiện tại.
-       */
       rows: content.rows.map(
         (row) => ({
           ...row,
@@ -256,95 +336,89 @@ function TableBlockEditor({
     const value =
       row.cells[column.id]
 
-    /*
-     * TEXT
-     */
     if (column.type === 'text') {
+      const htmlVal = typeof value === 'string' ? value : ''
+      // Strip HTML tags to get plain text for width measurement
+      const plainText = htmlVal.replace(/<[^>]*>/g, '') || ' '
       return (
-        <input
-          type="text"
-          value={
-            typeof value === 'string'
-              ? value
-              : ''
-          }
-          onChange={(event) =>
-            updateCell(
-              row.id,
-              column.id,
-              event.target.value,
-            )
-          }
-          className="w-full bg-transparent px-2 py-2 text-sm outline-none"
-        />
+        <div className="relative h-full w-full">
+          {/* Hidden div for column width measurement */}
+          <div className="invisible whitespace-pre px-1.5 py-2 text-sm min-h-[44px] pointer-events-none select-none">
+            {plainText}
+          </div>
+          {/* RichTextEditor overlaid on top */}
+          <div className="absolute inset-0 px-1.5 py-1.5 overflow-hidden hover:bg-app-hover/50 focus-within:bg-white focus-within:ring-1 focus-within:ring-inset focus-within:ring-indigo-500/20 transition-colors">
+            <RichTextEditor
+              content={htmlVal}
+              placeholder="..."
+              className="text-sm"
+              onChange={(html) => updateCell(row.id, column.id, html)}
+            />
+          </div>
+        </div>
       )
     }
 
-    /*
-     * LONG TEXT / NOTE / QUOTE
-     */
     if (
       column.type === 'longText' ||
       column.type === 'note' ||
       column.type === 'quote'
     ) {
+      const htmlVal = typeof value === 'string' ? value : ''
       return (
-        <textarea
-          value={
-            typeof value === 'string'
-              ? value
-              : ''
-          }
-          rows={2}
-          onChange={(event) =>
-            updateCell(
-              row.id,
-              column.id,
-              event.target.value,
-            )
-          }
-          className="w-full resize-y bg-transparent px-2 py-2 text-sm outline-none"
-        />
+        <div className="h-full w-full min-h-[44px] max-h-48 overflow-y-auto px-1.5 py-1.5 transition-colors hover:bg-app-hover/50 focus-within:bg-white focus-within:ring-1 focus-within:ring-inset focus-within:ring-indigo-500/20 custom-scrollbar">
+          <RichTextEditor
+            content={htmlVal}
+            placeholder="..."
+            className="text-sm"
+            onChange={(html) => updateCell(row.id, column.id, html)}
+          />
+        </div>
       )
     }
 
-    /*
-     * NUMBER
-     */
     if (column.type === 'number') {
+      const textVal = typeof value === 'number' ? value.toString() : ''
       return (
-        <input
-          type="number"
-          value={
-            typeof value === 'number'
-              ? value
-              : ''
-          }
-          onChange={(event) => {
-            const raw =
-              event.target.value
+        <div className="relative h-full w-full">
+          <div className="invisible flex items-center gap-1.5 whitespace-pre px-1.5 py-2 text-sm min-h-[44px]">
+            <Hash size={13} className="shrink-0" />
+            <span>{textVal + ' '}</span>
+          </div>
+          <div className="absolute inset-0 flex items-center gap-1.5 px-1.5 py-2 transition-colors hover:bg-app-hover/50 focus-within:bg-white focus-within:ring-1 focus-within:ring-inset focus-within:ring-indigo-500/20">
+            <Hash size={13} className="shrink-0 text-app-muted/70" />
+            <input
+              type="number"
+              value={
+                typeof value === 'number'
+                  ? value
+                  : ''
+              }
+              onChange={(event) => {
+                const raw =
+                  event.target.value
 
-            updateCell(
-              row.id,
-              column.id,
-              raw === ''
-                ? ''
-                : Number(raw),
-            )
-          }}
-          className="w-full bg-transparent px-2 py-2 text-sm outline-none"
-        />
+                updateCell(
+                  row.id,
+                  column.id,
+                  raw === ''
+                    ? ''
+                    : Number(raw),
+                )
+              }}
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-app-muted/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
+              placeholder="0"
+            />
+          </div>
+        </div>
       )
     }
 
-    /*
-     * CHECKBOX
-     */
     if (
       column.type === 'checkbox'
     ) {
       return (
-        <div className="flex justify-center">
+        <div className="flex h-full items-center justify-center py-3 transition-colors hover:bg-app-hover/50">
           <input
             type="checkbox"
             checked={
@@ -360,60 +434,63 @@ function TableBlockEditor({
                 event.target.checked,
               )
             }
-            className="h-4 w-4 accent-[#0068FF]"
+            className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-indigo-500 transition-colors hover:accent-indigo-600"
           />
         </div>
       )
     }
 
-    /*
-     * DATE
-     */
     if (column.type === 'date') {
+      const textVal = typeof value === 'string' && value ? value : 'dd/mm/yyyy'
       return (
-        <input
-          type="date"
-          value={
-            typeof value === 'string'
-              ? value
-              : ''
-          }
-          onChange={(event) =>
-            updateCell(
-              row.id,
-              column.id,
-              event.target.value,
-            )
-          }
-          className="w-full bg-transparent px-2 py-2 text-sm outline-none"
-        />
+        <div className="relative h-full w-full">
+          <div className="invisible whitespace-pre px-1.5 py-2 text-sm min-h-[44px]">
+            {textVal + '       '}
+          </div>
+          <input
+            type="date"
+            value={
+              typeof value === 'string'
+                ? value
+                : ''
+            }
+            onChange={(event) =>
+              updateCell(
+                row.id,
+                column.id,
+                event.target.value,
+              )
+            }
+            className="absolute inset-0 w-full h-full bg-transparent px-1.5 py-2 text-sm outline-none transition-colors hover:bg-app-hover/50 focus:bg-white focus:ring-1 focus:ring-inset focus:ring-indigo-500/20"
+          />
+        </div>
       )
     }
 
-    /*
-     * SELECT
-     */
-    if (
-      column.type === 'select'
-    ) {
+    if (column.type === 'select') {
+      const textVal = typeof value === 'string' && value ? value : '-- Chọn --'
       return (
-        <select
-          value={
-            typeof value === 'string'
-              ? value
-              : ''
-          }
-          onChange={(event) =>
-            updateCell(
-              row.id,
-              column.id,
-              event.target.value,
-            )
-          }
-          className="w-full bg-transparent px-2 py-2 text-sm outline-none"
-        >
-          <option value="">
-            Chọn...
+        <div className="relative h-full w-full">
+          <div className="invisible whitespace-pre px-1.5 py-2 text-sm min-h-[44px]">
+            {textVal + '    '}
+          </div>
+          <select
+            value={
+              typeof value === 'string'
+                ? value
+                : ''
+            }
+            onChange={(event) =>
+              updateCell(
+                row.id,
+                column.id,
+                event.target.value,
+              )
+            }
+            className="absolute inset-0 w-full h-full appearance-none bg-transparent px-1.5 py-2 text-sm outline-none transition-colors hover:bg-app-hover/50 focus:bg-white focus:ring-1 focus:ring-inset focus:ring-indigo-500/20"
+          >
+          <option value="" className="text-app-muted">
+            -- Chọn --
           </option>
 
           {column.options?.map(
@@ -427,12 +504,10 @@ function TableBlockEditor({
             ),
           )}
         </select>
+        </div>
       )
     }
 
-    /*
-     * MULTI SELECT
-     */
     if (
       column.type ===
       'multiSelect'
@@ -449,44 +524,57 @@ function TableBlockEditor({
           : []
 
       return (
-        <select
-          multiple
-          value={selectedValues}
-          onChange={(event) => {
-            const values =
-              Array.from(
-                event.target
-                  .selectedOptions,
-              ).map(
-                (option) =>
-                  option.value,
-              )
-
-            updateCell(
-              row.id,
-              column.id,
-              values,
-            )
-          }}
-          className="w-full bg-transparent px-2 py-2 text-sm outline-none"
-        >
-          {column.options?.map(
-            (option) => (
-              <option
-                key={option}
-                value={option}
-              >
-                {option}
-              </option>
-            ),
+        <div className="px-2 py-1.5">
+          {/* Tag display */}
+          {selectedValues.length > 0 && (
+            <div className="mb-1 flex flex-wrap gap-1">
+              {selectedValues.map(tag => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
           )}
-        </select>
+          <select
+            multiple
+            value={selectedValues}
+            onChange={(event) => {
+              const values =
+                Array.from(
+                  event.target
+                    .selectedOptions,
+                ).map(
+                  (option) =>
+                    option.value,
+                )
+
+              updateCell(
+                row.id,
+                column.id,
+                values,
+              )
+            }}
+            className="w-full bg-transparent text-xs text-app-muted outline-none"
+            size={Math.min(3, column.options?.length ?? 2)}
+          >
+            {column.options?.map(
+              (option) => (
+                <option
+                  key={option}
+                  value={option}
+                >
+                  {option}
+                </option>
+              ),
+            )}
+          </select>
+        </div>
       )
     }
 
-    /*
-     * LINK
-     */
     if (column.type === 'link') {
       const link: LinkValue =
         value &&
@@ -508,7 +596,7 @@ function TableBlockEditor({
           : ''
 
       return (
-        <div className="space-y-1 p-1">
+        <div className="space-y-1 p-2">
           <input
             type="text"
             value={link.label}
@@ -525,7 +613,7 @@ function TableBlockEditor({
                 },
               )
             }
-            className="w-full bg-transparent px-1 text-sm outline-none"
+            className="w-full bg-transparent px-1 text-sm font-medium outline-none"
           />
 
           <div className="flex items-center gap-1">
@@ -553,10 +641,10 @@ function TableBlockEditor({
                 href={normalizedUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-md p-1 text-general hover:bg-general/10"
+                className="shrink-0 rounded-md p-1 text-sky-500 hover:bg-sky-50"
               >
                 <ExternalLink
-                  size={14}
+                  size={13}
                 />
               </a>
             )}
@@ -565,9 +653,6 @@ function TableBlockEditor({
       )
     }
 
-    /*
-     * CHECKLIST
-     */
     if (
       column.type ===
       'checklist'
@@ -587,100 +672,114 @@ function TableBlockEditor({
         )
       }
 
+      const done = items.filter(i => i.checked).length
+      const longestText = items.reduce(
+        (max, item) => {
+          const plainText = item.text.replace(/<[^>]+>/g, '') || ''
+          return plainText.length > max.length ? plainText : max
+        },
+        ''
+      )
+
       return (
-        <div className="min-w-52 space-y-1 p-2">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="group/item flex items-center gap-2"
-            >
-              <input
-                type="checkbox"
-                checked={
-                  item.checked
-                }
-                onChange={() =>
-                  updateItems(
-                    items.map(
-                      (current) =>
-                        current.id ===
-                        item.id
-                          ? {
-                              ...current,
-                              checked:
-                                !current.checked,
-                            }
-                          : current,
-                    ),
-                  )
-                }
-                className="h-4 w-4 accent-[#0068FF]"
-              />
-
-              <input
-                value={item.text}
-                onChange={(event) =>
-                  updateItems(
-                    items.map(
-                      (current) =>
-                        current.id ===
-                        item.id
-                          ? {
-                              ...current,
-                              text:
-                                event
-                                  .target
-                                  .value,
-                            }
-                          : current,
-                    ),
-                  )
-                }
-                className={`min-w-0 flex-1 bg-transparent text-xs outline-none ${
-                  item.checked
-                    ? 'text-app-muted line-through'
-                    : ''
-                }`}
-              />
-
-              <button
-                type="button"
-                onClick={() =>
-                  updateItems(
-                    items.filter(
-                      (current) =>
-                        current.id !==
-                        item.id,
-                    ),
-                  )
-                }
-                className="text-app-muted opacity-0 hover:text-red-500 group-hover/item:opacity-100"
+        <div className="h-full px-1.5 py-2 transition-colors hover:bg-app-hover/30">
+          <div className="space-y-1.5">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="group/item relative flex items-center gap-1.5 rounded-md border border-transparent px-1 py-1 transition-colors hover:border-app-border hover:bg-white"
               >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
+                <input
+                  type="checkbox"
+                  checked={item.checked}
+                  onChange={() =>
+                    updateItems(
+                      items.map((current) =>
+                        current.id === item.id
+                          ? { ...current, checked: !current.checked }
+                          : current,
+                      ),
+                    )
+                  }
+                  className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-emerald-500 shrink-0"
+                />
+                {/* Rich text input */}
+                <div className={`flex-1 min-w-0 ${item.checked ? 'text-app-muted/60 line-through opacity-60' : 'text-app-text'}`}>
+                  <RichTextEditor
+                    content={item.text}
+                    placeholder="Việc cần làm..."
+                    onChange={(html) =>
+                      updateItems(
+                        items.map((current) =>
+                          current.id === item.id
+                            ? { ...current, text: html }
+                            : current,
+                        ),
+                      )
+                    }
+                    className="text-xs"
+                  />
+                </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              updateItems([
-                ...items,
+                {/* Delete button - absolute so it doesn't add width */}
+                <button
+                  type="button"
+                  title="Xóa"
+                  onClick={() =>
+                    updateItems(items.filter((current) => current.id !== item.id))
+                  }
+                  className="absolute right-0.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-app-muted/50 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover/item:opacity-100"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
 
-                {
-                  id: generateId(
-                    'check',
-                  ),
-                  text: '',
-                  checked: false,
-                },
-              ])
-            }
-            className="flex items-center gap-1 text-xs text-app-muted hover:text-general"
-          >
-            <Plus size={13} />
-            Thêm
-          </button>
+          {/* Width enforcer: invisible row that mirrors longest item → table-auto reads this as min column width */}
+          <div aria-hidden className="invisible pointer-events-none flex items-center gap-1.5 px-1 py-1 text-xs whitespace-pre">
+            <span className="h-4 w-4 inline-block shrink-0" />
+            {longestText || ' '}
+          </div>
+
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() =>
+                updateItems([
+                  ...items,
+                  {
+                    id: crypto.randomUUID(),
+                    text: '',
+                    checked: false,
+                  },
+                ])
+              }
+              className="flex items-center gap-1 rounded px-1 py-0.5 text-xs font-medium text-app-muted/80 transition-colors hover:bg-white hover:text-emerald-600 w-fit"
+            >
+              <Plus size={12} />
+              Thêm
+            </button>
+
+            {items.length > 0 && (
+              <div className="relative flex h-[18px] w-[18px] shrink-0 items-center justify-center" title={`${done}/${items.length} hoàn thành`}>
+                <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="14" fill="none" className="stroke-slate-200" strokeWidth="5" />
+                  <circle
+                    cx="18" cy="18" r="14" fill="none"
+                    className="stroke-emerald-500 transition-all duration-500 ease-out"
+                    strokeWidth="5"
+                    strokeDasharray="88"
+                    strokeDashoffset={88 - (done / items.length) * 88}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span className="absolute text-[7px] font-bold text-emerald-600">
+                  {Math.round((done / items.length) * 100)}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       )
     }
@@ -690,101 +789,137 @@ function TableBlockEditor({
 
   return (
     <>
-      <div className="overflow-x-auto rounded-xl border border-app-border">
-        {content.columns.length ===
-        0 ? (
-          <div className="p-8 text-center">
-            <p className="text-sm font-medium">
+      <div className="group/block relative -mx-4 px-4 py-2">
+      <div className="w-fit max-w-full overflow-x-auto rounded-xl border border-app-border bg-white shadow-sm ring-1 ring-slate-900/5 custom-scrollbar">
+        {content.columns.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="text-indigo-400"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="3" y1="9" x2="21" y2="9" />
+                <line x1="3" y1="15" x2="21" y2="15" />
+                <line x1="9" y1="3" x2="9" y2="21" />
+              </svg>
+            </div>
+
+            <p className="mt-3 text-sm font-semibold">
               Bảng chưa có cột
             </p>
 
             <p className="mt-1 text-xs text-app-muted">
-              Thêm cột và chọn loại
-              nội dung cho cột đó.
+              Thêm cột và chọn loại nội dung cho cột đó.
             </p>
 
             <button
               type="button"
               onClick={() => {
-                setEditingColumn(
-                  undefined,
-                )
-
-                setColumnModalOpen(
-                  true,
-                )
+                setEditingColumn(undefined)
+                setColumnModalOpen(true)
               }}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-general px-3 py-2 text-sm font-medium text-white"
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
             >
-              <Plus size={16} />
-              Thêm cột
+              <Plus size={15} />
+              Thêm cột đầu tiên
             </button>
           </div>
         ) : (
-          <>
-            <table className="w-full min-w-[700px] border-collapse">
-              <thead className="bg-app-surface">
-                <tr>
+          <div className="min-w-fit flex flex-col">
+            <table className="w-max border-collapse table-auto">
+              <thead>
+                <tr className="bg-app-surface/80">
                   {content.columns.map(
-                    (column) => (
-                      <th
-                        key={column.id}
-                        className="group/header min-w-44 border-b border-r border-app-border px-3 py-2 text-left last:border-r-0"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold">
+                    (column) => {
+                      // Only apply explicit width when user has resized or saved
+
+                      return (
+                        <th
+                          key={column.id}
+                          ref={(el) => { colRefs.current[column.id] = el }}
+                          style={
+                            tempWidths[column.id]
+                              ? { width: tempWidths[column.id], minWidth: tempWidths[column.id] }
+                              : column.width
+                              ? { width: column.width }
+                              : undefined
+                          }
+                          className="group/header relative border-b border-r border-app-border px-1.5 py-2.5 text-left last:border-r-0"
+                        >
+                        <div className="relative flex items-center w-full h-full">
+                          <div className="min-w-0 flex-1 pr-2">
+                            <p className="truncate text-xs font-semibold text-app-text">
                               {
                                 column.name
                               }
                             </p>
-
-                            <p className="text-[10px] font-normal text-app-muted">
-                              {
-                                CONTENT_REGISTRY[
-                                  column
-                                    .type
-                                ]
-                                  .label
-                              }
-                            </p>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingColumn(
-                                column,
-                              )
+                          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover/header:opacity-100 bg-white/90 rounded-md backdrop-blur-sm p-0.5 shadow-sm border border-slate-100">
+                            <button
+                              type="button"
+                              title="Chỉnh sửa cột"
+                              onClick={() => {
+                                setEditingColumn(
+                                  column,
+                                )
 
-                              setColumnModalOpen(
-                                true,
-                              )
-                            }}
-                            className="rounded-md p-1 text-app-muted opacity-0 hover:bg-white hover:text-general group-hover/header:opacity-100"
-                          >
-                            <Pencil
-                              size={14}
-                            />
-                          </button>
+                                setColumnModalOpen(
+                                  true,
+                                )
+                              }}
+                              className="rounded-md p-1 text-app-muted hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+                            >
+                              <Pencil
+                                size={12}
+                              />
+                            </button>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              removeColumn(
-                                column.id,
-                              )
-                            }
-                            className="rounded-md p-1 text-app-muted opacity-0 hover:bg-red-50 hover:text-red-500 group-hover/header:opacity-100"
-                          >
-                            <Trash2
-                              size={14}
-                            />
-                          </button>
+                            <button
+                              type="button"
+                              title="Xóa cột"
+                              onClick={() =>
+                                removeColumn(
+                                  column.id,
+                                )
+                              }
+                              className="rounded-md p-1 text-app-muted hover:bg-red-50 hover:text-red-600 transition-colors"
+                            >
+                              <Trash2
+                                size={12}
+                              />
+                            </button>
+                          </div>
                         </div>
+
+                        {/* Column Resizer — double-click to reset to auto width */}
+                        <div
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            const thEl = colRefs.current[column.id]
+                            const actualWidth = thEl ? thEl.getBoundingClientRect().width : 120
+                            setResizingColId(column.id)
+                            setStartX(e.clientX)
+                            setStartWidth(actualWidth)
+                          }}
+                          onDoubleClick={(e) => {
+                            e.preventDefault()
+                            resetColumnWidth(column.id)
+                          }}
+                          title="Kéo để thạy đổi kích thước • Double-click để tự động"
+                          className={`absolute bottom-0 right-0 top-0 z-10 w-2 cursor-col-resize transition-colors hover:bg-indigo-400/50 ${
+                            resizingColId === column.id ? 'bg-indigo-500' : ''
+                          }`}
+                        />
                       </th>
-                    )
-                  )}
+                    );
+                  })}
 
                   <th className="w-12 border-b border-app-border" />
                 </tr>
@@ -795,7 +930,7 @@ function TableBlockEditor({
                   (row) => (
                     <tr
                       key={row.id}
-                      className="group/row"
+                      className="group/row transition-colors hover:bg-slate-50/70"
                     >
                       {content.columns.map(
                         (column) => (
@@ -803,25 +938,28 @@ function TableBlockEditor({
                             key={
                               column.id
                             }
-                            className="border-b border-r border-app-border align-top last:border-r-0"
+                            className="h-[1px] border-b border-r border-app-border/70 align-top last:border-r-0 p-0"
                           >
-                            {renderCell(
-                              column,
-                              row,
-                            )}
+                            <div className="h-full min-h-[44px]">
+                              {renderCell(
+                                column,
+                                row,
+                              )}
+                            </div>
                           </td>
                         ),
                       )}
 
-                      <td className="border-b border-app-border text-center">
+                      <td className="h-[1px] w-12 border-b border-app-border/70 text-center align-middle p-0">
                         <button
                           type="button"
+                          title="Xóa hàng"
                           onClick={() =>
                             removeRow(
                               row.id,
                             )
                           }
-                          className="rounded-md p-2 text-app-muted opacity-0 hover:bg-red-50 hover:text-red-500 group-hover/row:opacity-100"
+                          className="mx-auto rounded-md p-1.5 text-app-muted opacity-0 transition-all hover:bg-red-50 hover:text-red-600 group-hover/row:opacity-100"
                         >
                           <Trash2
                             size={14}
@@ -834,15 +972,18 @@ function TableBlockEditor({
               </tbody>
             </table>
 
-            <div className="flex gap-2 p-2">
+            {/* Footer actions */}
+            <div className="sticky left-0 flex items-center gap-3 bg-app-surface/30 px-3 py-2.5 border-t border-app-border/70 w-full">
               <button
                 type="button"
                 onClick={addRow}
-                className="flex items-center gap-1 rounded-lg px-3 py-2 text-xs text-app-muted hover:bg-app-hover hover:text-general"
+                className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-app-muted transition-colors hover:bg-white hover:text-indigo-600 hover:shadow-sm ring-1 ring-transparent hover:ring-slate-900/5"
               >
                 <Plus size={14} />
-                Hàng
+                Thêm hàng
               </button>
+
+              <div className="h-4 w-px bg-app-border" />
 
               <button
                 type="button"
@@ -855,15 +996,20 @@ function TableBlockEditor({
                     true,
                   )
                 }}
-                className="flex items-center gap-1 rounded-lg px-3 py-2 text-xs text-app-muted hover:bg-app-hover hover:text-general"
+                className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-app-muted transition-colors hover:bg-white hover:text-indigo-600 hover:shadow-sm ring-1 ring-transparent hover:ring-slate-900/5"
               >
                 <Plus size={14} />
-                Cột
+                Thêm cột
               </button>
+
+              <span className="ml-auto text-xs font-medium text-app-muted/70">
+                {content.rows.length} hàng · {content.columns.length} cột
+              </span>
             </div>
-          </>
+          </div>
         )}
       </div>
+    </div>
 
       <TableColumnModal
         open={columnModalOpen}
