@@ -95,7 +95,7 @@ function Sidebar({
   }
 
   const categories =
-    useLiveQuery(
+    useLiveQuery<Category[]>(
       () =>
         activeWorkspaceId
           ? db.categories
@@ -107,7 +107,7 @@ function Sidebar({
     ) ?? []
 
   const pages =
-    useLiveQuery(
+    useLiveQuery<WorkspacePage[]>(
       () =>
         activeWorkspaceId
           ? db.pages

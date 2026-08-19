@@ -57,7 +57,7 @@ function App() {
     ) ?? null
 
   const pages =
-    useLiveQuery(
+    useLiveQuery<Page[]>(
       () =>
         activeWorkspaceId
           ? db.pages.where('workspaceId').equals(activeWorkspaceId).toArray()

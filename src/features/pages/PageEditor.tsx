@@ -1,13 +1,11 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import {
   FileText,
   LayoutTemplate,
-  Plus,
   Sparkles,
-  X,
 } from 'lucide-react'
 
 import type { Page } from '../../types/page'

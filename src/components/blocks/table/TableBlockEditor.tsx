@@ -12,7 +12,6 @@ import {
 } from 'lucide-react'
 
 import {
-  CONTENT_REGISTRY,
   createDefaultCellValue,
   type TableCellType,
 } from '../../../content/contentRegistry'
@@ -37,21 +36,6 @@ interface TableBlockEditorProps {
   onChange: (
     content: TableBlockContent,
   ) => Promise<void> | void
-}
-
-// Per column-type badge colors
-const COL_TYPE_COLORS: Record<string, string> = {
-  text:        'bg-slate-100 text-slate-600',
-  longText:    'bg-slate-100 text-slate-600',
-  number:      'bg-blue-50 text-blue-600',
-  checkbox:    'bg-green-50 text-green-600',
-  date:        'bg-purple-50 text-purple-600',
-  select:      'bg-orange-50 text-orange-600',
-  multiSelect: 'bg-amber-50 text-amber-600',
-  link:        'bg-sky-50 text-sky-600',
-  checklist:   'bg-emerald-50 text-emerald-600',
-  note:        'bg-yellow-50 text-yellow-600',
-  quote:       'bg-violet-50 text-violet-600',
 }
 
 function TableBlockEditor({

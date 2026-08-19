@@ -6,13 +6,11 @@ import {
 } from 'react'
 
 import {
-  AlignLeft,
   ChevronDown,
   ChevronUp,
   Code,
   ExternalLink,
   FileText,
-  GripVertical,
   Heading,
   Link,
   ListChecks,
@@ -488,11 +486,6 @@ function BlockEditor({
 
   return (
     <div className="group/block relative rounded-xl px-3 py-2 transition">
-      {/* Block type indicator — left side */}
-      <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-5 opacity-0 transition group-hover/block:opacity-100">
-        <BlockIcon size={14} className={blockIconColor} />
-      </div>
-
       {/* Toolbar — above the block content */}
       <div className="mb-1.5 flex h-7 items-center justify-end gap-0.5 opacity-0 transition group-hover/block:opacity-100">
         <div className="flex items-center gap-0.5 rounded-lg border border-app-border bg-white p-0.5 shadow-sm">
@@ -529,7 +522,14 @@ function BlockEditor({
         </div>
       </div>
 
-      {renderContent()}
+      <div className="relative">
+        {/* Block type indicator — left side */}
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-5 opacity-0 transition group-hover/block:opacity-100">
+          <BlockIcon size={14} className={blockIconColor} />
+        </div>
+
+        {renderContent()}
+      </div>
     </div>
   )
 }
