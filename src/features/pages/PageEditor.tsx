@@ -126,8 +126,8 @@ function PageEditor({
           <div className="relative">
             {/* Insert Top */}
             {blocks.length > 0 && (
-              <div className="group/insert absolute -top-2 left-0 z-10 flex h-4 w-full -translate-y-1/2 items-center justify-center opacity-0 transition-opacity hover:opacity-100">
-                <div className="absolute top-1/2 h-px w-full -translate-y-1/2 bg-general/20 opacity-0 transition-opacity group-hover/insert:opacity-100" />
+              <div className="group/insert absolute -top-2 left-0 z-10 flex h-4 w-full -translate-y-1/2 items-center justify-center opacity-100 md:opacity-0 transition-opacity md:hover:opacity-100">
+                <div className="absolute top-1/2 h-px w-full -translate-y-1/2 bg-general/20 opacity-100 md:opacity-0 transition-opacity md:group-hover/insert:opacity-100" />
                 <div className="relative">
                   <BlockPicker variant="compact" onSelect={(type) => handleCreateBlock(type, null)} />
                 </div>
@@ -167,8 +167,8 @@ function PageEditor({
                     />
                     
                     {/* Insert After */}
-                    <div className="group/insert absolute -bottom-1 left-0 z-10 flex h-4 w-full translate-y-1/2 items-center justify-center opacity-0 transition-opacity hover:opacity-100">
-                      <div className="absolute top-1/2 h-px w-full -translate-y-1/2 bg-general/20 opacity-0 transition-opacity group-hover/insert:opacity-100" />
+                    <div className="group/insert absolute -bottom-1 left-0 z-10 flex h-4 w-full translate-y-1/2 items-center justify-center opacity-100 md:opacity-0 transition-opacity md:hover:opacity-100">
+                      <div className="absolute top-1/2 h-px w-full -translate-y-1/2 bg-general/20 opacity-100 md:opacity-0 transition-opacity md:group-hover/insert:opacity-100" />
                       <div className="relative">
                         <BlockPicker variant="compact" onSelect={(type) => handleCreateBlock(type, block.id)} />
                       </div>

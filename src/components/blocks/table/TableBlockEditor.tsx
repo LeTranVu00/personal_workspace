@@ -712,7 +712,7 @@ function TableBlockEditor({
                   onClick={() =>
                     updateItems(items.filter((current) => current.id !== item.id))
                   }
-                  className="absolute right-0.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-app-muted/50 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover/item:opacity-100"
+                  className="absolute right-0.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-app-muted/50 opacity-100 md:opacity-0 transition-all hover:bg-red-50 hover:text-red-500 md:group-hover/item:opacity-100"
                 >
                   <Trash2 size={12} />
                 </button>
@@ -845,7 +845,7 @@ function TableBlockEditor({
                             </p>
                           </div>
 
-                          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover/header:opacity-100 bg-white/90 rounded-md backdrop-blur-sm p-0.5 shadow-sm border border-slate-100">
+                          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex shrink-0 items-center gap-0.5 opacity-100 md:opacity-0 transition md:group-hover/header:opacity-100 bg-white/90 rounded-md backdrop-blur-sm p-0.5 shadow-sm border border-slate-100">
                             <button
                               type="button"
                               title="Chỉnh sửa cột"
@@ -943,7 +943,7 @@ function TableBlockEditor({
                               row.id,
                             )
                           }
-                          className="mx-auto rounded-md p-1.5 text-app-muted opacity-0 transition-all hover:bg-red-50 hover:text-red-600 group-hover/row:opacity-100"
+                          className="mx-auto rounded-md p-1.5 text-app-muted opacity-100 md:opacity-0 transition-all hover:bg-red-50 hover:text-red-600 md:group-hover/row:opacity-100"
                         >
                           <Trash2
                             size={14}

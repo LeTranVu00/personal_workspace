@@ -295,7 +295,7 @@ function Sidebar({
                         cur === workspace.id ? null : workspace.id,
                       )
                     }}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-1 text-app-muted opacity-0 transition hover:bg-white hover:text-app-text group-hover/ws:opacity-100"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-1 text-app-muted opacity-100 md:opacity-0 transition hover:bg-white hover:text-app-text md:group-hover/ws:opacity-100"
                   >
                     <MoreHorizontal size={14} />
                   </button>
@@ -405,7 +405,7 @@ function Sidebar({
                         {category.name}
                       </span>
 
-                      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover/cat:opacity-100">
+                      <div className="flex shrink-0 items-center gap-0.5 opacity-100 md:opacity-0 transition md:group-hover/cat:opacity-100">
                         <button
                           type="button"
                           title="Thêm Page"
@@ -492,7 +492,7 @@ function Sidebar({
                                   cur === page.id ? null : page.id,
                                 )
                               }}
-                              className="absolute right-0.5 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-app-muted opacity-0 transition hover:bg-white group-hover/page:opacity-100"
+                              className="absolute right-0.5 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-app-muted opacity-100 md:opacity-0 transition hover:bg-white md:group-hover/page:opacity-100"
                             >
                               <MoreHorizontal size={13} />
                             </button>
