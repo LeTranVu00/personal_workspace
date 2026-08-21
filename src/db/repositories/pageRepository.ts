@@ -73,8 +73,9 @@ export const pageRepository = {
 
   async update(
     id: string,
-    updates: Partial<Pick<Page, 'title' | 'type' | 'status' | 'priority' | 'relatedPageIds' | 'tags' | 'pinned'>> & {
+    updates: Partial<Pick<Page, 'title' | 'type' | 'status' | 'priority' | 'reminderEnabled' | 'relatedPageIds' | 'tags' | 'pinned'>> & {
       dueDate?: number | null
+      reminderAt?: number | null
       recurrence?: PageRecurrence | null
     },
   ): Promise<void> {
@@ -84,6 +85,8 @@ export const pageRepository = {
       ...(updates.status !== undefined && { status: updates.status }),
       ...(updates.priority !== undefined && { priority: updates.priority }),
       ...(updates.dueDate !== undefined && { dueDate: updates.dueDate ?? undefined }),
+      ...(updates.reminderAt !== undefined && { reminderAt: updates.reminderAt ?? undefined }),
+      ...(updates.reminderEnabled !== undefined && { reminderEnabled: updates.reminderEnabled }),
       ...(updates.recurrence !== undefined && { recurrence: updates.recurrence ?? undefined }),
       ...(updates.relatedPageIds !== undefined && {
         relatedPageIds: normalizeRelatedPageIds(updates.relatedPageIds),

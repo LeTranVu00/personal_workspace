@@ -177,6 +177,30 @@ export type TranslationKey =
   | 'table.resizeHint'
   | 'table.rows'
   | 'table.columns'
+  | 'notification.open'
+  | 'notification.title'
+  | 'notification.description'
+  | 'notification.empty'
+  | 'notification.overdue'
+  | 'notification.upcoming'
+  | 'notification.overdueTitle'
+  | 'notification.upcomingTitle'
+  | 'notification.markRead'
+  | 'notification.enable'
+  | 'notification.reminder'
+  | 'notification.reminderDescription'
+  | 'notification.enableForPage'
+  | 'notification.reminderTime'
+  | 'notification.open'
+  | 'notification.title'
+  | 'notification.description'
+  | 'notification.empty'
+  | 'notification.overdue'
+  | 'notification.upcoming'
+  | 'notification.overdueTitle'
+  | 'notification.upcomingTitle'
+  | 'notification.markRead'
+  | 'notification.enable'
 
 const dictionary: Record<Language, Record<TranslationKey, string>> = {
   vi: {
@@ -298,6 +322,20 @@ const dictionary: Record<Language, Record<TranslationKey, string>> = {
     'overview.next': 'Tiếp theo',
     'overview.kanban': 'Kanban',
     'overview.noWork': 'Không có việc nào',
+    'notification.open': 'Mở thông báo',
+    'notification.title': 'Thông báo',
+    'notification.description': 'Nhắc việc và deadline gần đến.',
+    'notification.empty': 'Không có thông báo mới.',
+    'notification.overdue': 'Đã quá hạn',
+    'notification.upcoming': 'Sắp đến hạn',
+    'notification.overdueTitle': 'Task đã quá hạn',
+    'notification.upcomingTitle': 'Task sắp đến hạn',
+    'notification.markRead': 'Đánh dấu đã đọc',
+    'notification.enable': 'Bật thông báo thiết bị',
+    'notification.reminder': 'Nhắc thông báo',
+    'notification.reminderDescription': 'Cài thời điểm nhắc riêng cho Page này.',
+    'notification.enableForPage': 'Bật nhắc cho Page này',
+    'notification.reminderTime': 'Thời điểm nhắc',
     'overview.overview': 'Tổng quan',
     'overview.doing': 'Đang làm',
     'overview.active': 'Chưa bắt đầu',
@@ -473,6 +511,20 @@ const dictionary: Record<Language, Record<TranslationKey, string>> = {
     'overview.next': 'Next',
     'overview.kanban': 'Kanban',
     'overview.noWork': 'No work items',
+    'notification.open': 'Open notifications',
+    'notification.title': 'Notifications',
+    'notification.description': 'Reminders and upcoming deadlines.',
+    'notification.empty': 'No new notifications.',
+    'notification.overdue': 'Overdue',
+    'notification.upcoming': 'Due soon',
+    'notification.overdueTitle': 'Overdue task',
+    'notification.upcomingTitle': 'Task due soon',
+    'notification.markRead': 'Mark as read',
+    'notification.enable': 'Enable device notifications',
+    'notification.reminder': 'Reminder',
+    'notification.reminderDescription': 'Set a custom reminder time for this Page.',
+    'notification.enableForPage': 'Enable reminder for this Page',
+    'notification.reminderTime': 'Reminder time',
     'overview.overview': 'Overview',
     'overview.doing': 'Doing',
     'overview.active': 'Active',

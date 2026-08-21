@@ -12,6 +12,7 @@ import { workspaceRepository } from './db/repositories/workspaceRepository'
 import type { Workspace } from './types/workspace'
 import type { Page } from './types/page'
 import { useLanguage } from './hooks/useLanguage'
+import NotificationBell from './components/common/NotificationBell'
 
 function App() {
   const { t } = useLanguage()
@@ -68,6 +69,9 @@ function App() {
           : Promise.resolve([]),
       [activeWorkspaceId],
     ) ?? []
+
+  const allPages =
+    useLiveQuery<Page[]>(() => db.pages.toArray(), []) ?? []
 
   const activePage =
     (pages.find((p: Page) => p.id === activePageId) ?? null)
@@ -197,6 +201,10 @@ function App() {
           </div>
 
           <div className="flex items-center gap-2">
+            <NotificationBell
+              pages={allPages}
+              onSelectPage={(pageId) => setActivePageId(pageId)}
+            />
             {/* Keyboard shortcut hint */}
             <div className="hidden items-center gap-1.5 rounded-lg border border-app-border bg-app-surface px-2.5 py-1.5 text-[11px] text-app-muted lg:flex">
               <Command size={12} />

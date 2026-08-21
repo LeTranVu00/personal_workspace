@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 
 import {
   Archive,
+  Bell,
   CalendarDays,
   FileText,
   Link2,
@@ -51,6 +52,9 @@ function PageEditor({ page, onSelectPage }: PageEditorProps) {
   const [localDueDate, setLocalDueDate] = useState(() =>
     page.dueDate ? new Date(page.dueDate).toISOString().slice(0, 10) : '',
   )
+  const [localReminderAt, setLocalReminderAt] = useState(() =>
+    page.reminderAt ? new Date(page.reminderAt).toISOString().slice(0, 16) : '',
+  )
   const [showMetadata, setShowMetadata] = useState(false)
   const { t, translate } = useLanguage()
 
@@ -73,6 +77,10 @@ function PageEditor({ page, onSelectPage }: PageEditorProps) {
     setLocalDueDate(page.dueDate ? new Date(page.dueDate).toISOString().slice(0, 10) : '')
   }, [page.dueDate])
 
+  useEffect(() => {
+    setLocalReminderAt(page.reminderAt ? new Date(page.reminderAt).toISOString().slice(0, 16) : '')
+  }, [page.reminderAt])
+
   const handleUpdateTitle = async () => {
     const nextTitle = localTitle.replace(/<[^>]+>/g, '').trim() || 'Trang không có tiêu đề'
     if (nextTitle !== page.title) {
@@ -90,6 +98,23 @@ function PageEditor({ page, onSelectPage }: PageEditorProps) {
     setLocalDueDate(value)
     await pageRepository.update(page.id, {
       dueDate: value ? new Date(`${value}T23:59:59`).getTime() : null,
+    })
+  }
+
+  const handleReminderToggle = async (enabled: boolean) => {
+    const reminderAt = enabled
+      ? page.reminderAt ?? page.dueDate ?? Date.now() + 60 * 60 * 1000
+      : null
+    const nextValue = reminderAt ? new Date(reminderAt).toISOString().slice(0, 16) : ''
+    setLocalReminderAt(nextValue)
+    await pageRepository.update(page.id, { reminderEnabled: enabled, reminderAt })
+  }
+
+  const handleReminderAtChange = async (value: string) => {
+    setLocalReminderAt(value)
+    await pageRepository.update(page.id, {
+      reminderEnabled: Boolean(value),
+      reminderAt: value ? new Date(value).getTime() : null,
     })
   }
 
@@ -262,6 +287,40 @@ function PageEditor({ page, onSelectPage }: PageEditorProps) {
                       <option value="weekly">{translate('Mỗi tuần')}</option>
                       <option value="monthly">{translate('Mỗi tháng')}</option>
                     </select>
+                  </div>
+
+                  <div className="sm:col-span-2 lg:col-span-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
+                    <div className="flex items-start gap-3">
+                      <Bell size={15} className="mt-0.5 shrink-0 text-primary" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <div className="text-xs font-semibold text-app-text">{t('notification.reminder')}</div>
+                            <p className="mt-0.5 text-[11px] text-app-muted">{t('notification.reminderDescription')}</p>
+                          </div>
+                          <label className="inline-flex items-center gap-2 text-xs font-medium text-primary">
+                            <input
+                              type="checkbox"
+                              checked={page.reminderEnabled ?? false}
+                              onChange={(event) => void handleReminderToggle(event.target.checked)}
+                              className="h-4 w-4 accent-primary"
+                            />
+                            {t('notification.enableForPage')}
+                          </label>
+                        </div>
+                        {page.reminderEnabled && (
+                          <label className="app-form-label mt-3 block">
+                            {t('notification.reminderTime')}
+                            <input
+                              type="datetime-local"
+                              value={localReminderAt}
+                              onChange={(event) => void handleReminderAtChange(event.target.value)}
+                              className="app-form-input mt-1"
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Tags */}

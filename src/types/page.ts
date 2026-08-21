@@ -12,6 +12,8 @@ export interface Page {
   status?: PageStatus
   priority?: PagePriority
   dueDate?: number
+  reminderEnabled?: boolean
+  reminderAt?: number
   recurrence?: PageRecurrence
   relatedPageIds?: string[]
   tags?: string[]
