@@ -20,7 +20,7 @@ db.version(1).stores({
     'id, workspaceId, name, order, createdAt, updatedAt',
 
   pages:
-    'id, workspaceId, categoryId, title, order, createdAt, updatedAt',
+    'id, workspaceId, categoryId, type, status, priority, pinned, tags, title, order, createdAt, updatedAt',
 
   blocks:
     'id, pageId, type, order, createdAt, updatedAt',

@@ -58,6 +58,22 @@ export const categoryRepository = {
         const pageIds = pages.map((page) => page.id)
 
         if (pageIds.length > 0) {
+          const deletedPageIds = new Set(pageIds)
+          const relatedPages = (await db.pages.toArray()).filter((page) => !deletedPageIds.has(page.id))
+
+          await Promise.all(
+            relatedPages
+              .filter((page) => (page.relatedPageIds ?? []).some((relatedId) => deletedPageIds.has(relatedId)))
+              .map((page) =>
+                db.pages.update(page.id, {
+                  relatedPageIds: (page.relatedPageIds ?? []).filter((relatedId) => !deletedPageIds.has(relatedId)),
+                  updatedAt: Date.now(),
+                }),
+              ),
+          )
+        }
+
+        if (pageIds.length > 0) {
           await db.blocks
             .where('pageId')
             .anyOf(pageIds)

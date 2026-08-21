@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { LayoutGrid, X } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import { LayoutGrid, X, Check, Loader2, Sparkles } from 'lucide-react'
+import { useLanguage } from '../../hooks/useLanguage'
 
 interface WorkspaceModalProps {
   open: boolean
@@ -10,59 +11,54 @@ interface WorkspaceModalProps {
   onSubmit: (name: string) => Promise<void> | void
 }
 
-function WorkspaceModal({
-  open,
-  title,
-  initialName = '',
-  submitText = 'Lưu',
-  onClose,
-  onSubmit,
+function WorkspaceModal({ 
+  open, 
+  title, 
+  initialName = '', 
+  submitText, 
+  onClose, 
+  onSubmit 
 }: WorkspaceModalProps) {
+  const { t } = useLanguage()
   const [name, setName] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (open) {
       setName(initialName)
+      // Focus input after animation
+      setTimeout(() => {
+        inputRef.current?.focus()
+        inputRef.current?.select()
+      }, 50)
     }
   }, [open, initialName])
 
   useEffect(() => {
+    if (!open) return
+    
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        event.preventDefault()
         onClose()
       }
     }
-
-    if (open) {
-      window.addEventListener('keydown', handleKeyDown)
-    }
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [open, onClose])
 
-  if (!open) {
-    return null
-  }
+  if (!open) return null
 
-  const handleSubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-
     const trimmedName = name.trim()
-
-    if (!trimmedName || isSubmitting) {
-      return
-    }
-
+    if (!trimmedName || isSubmitting) return
+    
     try {
       setIsSubmitting(true)
-
       await onSubmit(trimmedName)
-
       onClose()
     } finally {
       setIsSubmitting(false)
@@ -70,69 +66,115 @@ function WorkspaceModal({
   }
 
   return (
-    <div
-      className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+    <div 
+      className="modal-overlay flex items-center justify-center p-4"
       onMouseDown={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="workspace-modal-title"
     >
-      <div
-        className="animate-slide-up w-full max-w-md rounded-2xl border border-app-border bg-white shadow-2xl"
+      <div 
+        className="modal-content w-full max-w-md rounded-xl border border-app-border bg-white shadow-xl"
         onMouseDown={(event) => event.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-app-border px-5 py-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-general/10">
-              <LayoutGrid size={15} className="text-general" />
+        <div className="flex items-center justify-between border-b border-app-border px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+              <LayoutGrid size={16} className="text-primary" />
             </div>
-            <h2 className="text-base font-semibold">{title}</h2>
+            <div>
+              <h2 
+                id="workspace-modal-title"
+                className="text-base font-semibold text-app-text"
+              >
+                {title}
+              </h2>
+              <p className="mt-0.5 text-xs text-app-muted">
+                {initialName ? t('workspace.editDescription') : t('workspace.createDescription')}
+              </p>
+            </div>
           </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-app-muted transition hover:bg-app-hover hover:text-app-text"
+          
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-app-muted transition-colors hover:bg-app-hover hover:text-app-text"
+            title={t('common.close')}
+            aria-label={t('common.close')}
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="p-5"
-        >
-          <label
-            htmlFor="workspace-name"
-            className="text-xs font-semibold uppercase tracking-wider text-app-muted"
-          >
-            Tên Workspace
-          </label>
-
-          <input
-            id="workspace-name"
-            type="text"
-            autoFocus
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Ví dụ: Học tập, Công việc..."
-            className="mt-2 w-full rounded-xl border border-app-border px-4 py-3 text-sm outline-none transition focus:border-general focus:ring-3 focus:ring-general/10"
-          />
-
-          <div className="mt-5 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-app-muted transition hover:bg-app-hover"
+        <form onSubmit={handleSubmit}>
+          <div className="px-6 py-5">
+            <label 
+              htmlFor="workspace-name"
+              className="app-form-label"
             >
-              Hủy
+              {t('workspace.label')}
+            </label>
+            
+            <div className="relative mt-2">
+              <input 
+                id="workspace-name"
+                ref={inputRef}
+                type="text" 
+                value={name} 
+                onChange={(event) => setName(event.target.value)} 
+                placeholder={t('workspace.placeholder')}
+                className="app-form-input pr-10"
+                disabled={isSubmitting}
+                autoComplete="off"
+                maxLength={50}
+              />
+              
+              {name.trim() && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Sparkles size={14} className="text-primary" />
+                </div>
+              )}
+            </div>
+
+            {/* Character count */}
+            <div className="mt-1.5 flex items-center justify-between">
+              <p className="text-[10px] text-app-muted-2">
+                {t('workspace.nameHint')}
+              </p>
+              <span className="text-[10px] text-app-muted-2">
+                {name.length}/50
+              </span>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-app-border bg-app-surface/30 px-6 py-4">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="app-secondary-action"
+              disabled={isSubmitting}
+            >
+              {t('common.cancel')}
             </button>
-
-            <button
-              type="submit"
-              disabled={!name.trim() || isSubmitting}
-              className="rounded-lg bg-general px-4 py-2 text-sm font-medium text-white shadow-sm shadow-general/20 transition hover:bg-general-dark disabled:cursor-not-allowed disabled:opacity-50"
+            
+            <button 
+              type="submit" 
+              disabled={!name.trim() || isSubmitting} 
+              className="app-primary-action min-w-[120px]"
             >
-              {isSubmitting ? 'Đang lưu...' : submitText}
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>{t('common.saving')}</span>
+                </>
+              ) : (
+                <>
+                  <Check size={16} />
+                  <span>{submitText ?? t('common.save')}</span>
+                </>
+              )}
             </button>
           </div>
         </form>

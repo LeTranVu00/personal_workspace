@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import {
   useEditor,
   EditorContent,
@@ -10,7 +9,15 @@ import { TextStyle } from '@tiptap/extension-text-style'
 import Underline from '@tiptap/extension-underline'
 import { FontSize } from './extensions/FontSize'
 
-import { Bold, Italic, Strikethrough, Underline as UnderlineIcon } from 'lucide-react'
+import { 
+  Bold, 
+  Italic, 
+  Strikethrough, 
+  Underline as UnderlineIcon,
+  Type,
+  ChevronDown,
+} from 'lucide-react'
+import { useLanguage } from '../../hooks/useLanguage'
 
 interface RichTextEditorProps {
   content: string
@@ -18,6 +25,7 @@ interface RichTextEditorProps {
   className?: string
   onChange: (html: string) => void
   onBlur?: () => void
+  onFocus?: () => void
 }
 
 function RichTextEditor({
@@ -26,7 +34,10 @@ function RichTextEditor({
   className = '',
   onChange,
   onBlur,
+  onFocus,
 }: RichTextEditorProps) {
+  const { translate } = useLanguage()
+  
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -34,7 +45,7 @@ function RichTextEditor({
         codeBlock: false, // We use custom code blocks
       }),
       Placeholder.configure({
-        placeholder,
+        placeholder: translate(placeholder ?? 'Nhập nội dung...'),
         emptyEditorClass: 'is-editor-empty',
       }),
       TextStyle,
@@ -55,57 +66,107 @@ function RichTextEditor({
     onBlur: () => {
       onBlur?.()
     },
+    onFocus: () => {
+      onFocus?.()
+    },
   })
-
-  // Sync external content changes if needed (e.g. initial load)
-  useEffect(() => {
-    if (editor && content !== editor.getHTML() && !editor.isFocused) {
-      // When content comes from DB (e.g. after sync) and it's different from editor
-      // We only update if editor is not currently focused to avoid messing up typing
-      // But actually, for live collaboration, we might need a better sync strategy.
-      // For now, this is fine.
-    }
-  }, [content, editor])
 
   if (!editor) {
     return null
   }
+
+  const fontSizeOptions = [
+    { value: '', label: translate('Cỡ mặc định') },
+    { value: '12px', label: '12px' },
+    { value: '14px', label: '14px' },
+    { value: '16px', label: '16px' },
+    { value: '18px', label: '18px' },
+    { value: '20px', label: '20px' },
+    { value: '24px', label: '24px' },
+    { value: '30px', label: '30px' },
+  ]
+
+  const currentFontSize = editor.getAttributes('textStyle').fontSize || ''
 
   return (
     <>
       {editor && (
         <BubbleMenu
           editor={editor}
-          className="z-50 flex items-center overflow-hidden rounded-lg border border-app-border bg-white shadow-lg"
+          className="z-50 flex items-center gap-0.5 overflow-hidden rounded-xl border border-app-border bg-white p-1 shadow-lg shadow-slate-200/50"
         >
-          <select
-            className="h-full bg-transparent px-2 py-2 text-sm text-app-text outline-none hover:bg-app-hover cursor-pointer border-r border-app-border appearance-none"
-            onChange={(e) => {
-              if (e.target.value) {
-                editor.chain().focus().setFontSize(e.target.value).run()
-              } else {
-                editor.chain().focus().unsetFontSize().run()
-              }
-            }}
-            value={editor.getAttributes('textStyle').fontSize || ''}
-            title="Cỡ chữ"
-          >
-            <option value="">Cỡ mặc định</option>
-            <option value="12px">12px</option>
-            <option value="14px">14px</option>
-            <option value="16px">16px</option>
-            <option value="18px">18px</option>
-            <option value="20px">20px</option>
-            <option value="24px">24px</option>
-            <option value="30px">30px</option>
-          </select>
+          {/* Font Size Selector */}
+          <div className="group relative flex items-center">
+            <button
+              type="button"
+              className="flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-medium text-app-text transition-colors hover:bg-app-hover"
+              title={translate('Cỡ chữ')}
+              onClick={() => {
+                // Cycle through font sizes
+                const currentIndex = fontSizeOptions.findIndex(opt => opt.value === currentFontSize)
+                const nextIndex = (currentIndex + 1) % fontSizeOptions.length
+                const nextSize = fontSizeOptions[nextIndex].value
+                
+                if (nextSize) {
+                  editor.chain().focus().setFontSize(nextSize).run()
+                } else {
+                  editor.chain().focus().unsetFontSize().run()
+                }
+              }}
+            >
+              <Type size={14} className="text-app-muted" />
+              <span className="min-w-[2rem] text-center">
+                {currentFontSize ? currentFontSize.replace('px', '') : 'Aa'}
+              </span>
+              <ChevronDown size={12} className="text-app-muted-2" />
+            </button>
 
+            {/* Dropdown */}
+            <div className="invisible absolute left-0 top-full z-50 mt-1 w-36 overflow-hidden rounded-lg border border-app-border bg-white opacity-0 shadow-lg transition-all group-hover:visible group-hover:opacity-100">
+              <div className="p-1">
+                {fontSizeOptions.map((option) => {
+                  const isActive = option.value === currentFontSize
+                  return (
+                    <button
+                      key={option.value || 'default'}
+                      type="button"
+                      onClick={() => {
+                        if (option.value) {
+                          editor.chain().focus().setFontSize(option.value).run()
+                        } else {
+                          editor.chain().focus().unsetFontSize().run()
+                        }
+                      }}
+                      className={`flex w-full items-center justify-between rounded-md px-3 py-1.5 text-xs transition-colors ${
+                        isActive
+                          ? 'bg-primary/10 text-primary font-medium'
+                          : 'text-app-text hover:bg-app-hover'
+                      }`}
+                    >
+                      <span>{option.label}</span>
+                      {isActive && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="mx-1 h-5 w-px bg-app-border" />
+
+          {/* Formatting Buttons */}
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`p-2 transition hover:bg-app-hover ${
-              editor.isActive('bold') ? 'bg-app-hover text-general' : 'text-app-text'
+            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+              editor.isActive('bold') 
+                ? 'bg-primary/10 text-primary' 
+                : 'text-app-muted hover:bg-app-hover hover:text-app-text'
             }`}
+            title="Bold"
           >
             <Bold size={14} />
           </button>
@@ -113,9 +174,12 @@ function RichTextEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`p-2 transition hover:bg-app-hover ${
-              editor.isActive('italic') ? 'bg-app-hover text-general' : 'text-app-text'
+            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+              editor.isActive('italic') 
+                ? 'bg-primary/10 text-primary' 
+                : 'text-app-muted hover:bg-app-hover hover:text-app-text'
             }`}
+            title="Italic"
           >
             <Italic size={14} />
           </button>
@@ -123,9 +187,12 @@ function RichTextEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleUnderline().run()}
-            className={`p-2 transition hover:bg-app-hover ${
-              editor.isActive('underline') ? 'bg-app-hover text-general' : 'text-app-text'
+            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+              editor.isActive('underline') 
+                ? 'bg-primary/10 text-primary' 
+                : 'text-app-muted hover:bg-app-hover hover:text-app-text'
             }`}
+            title="Underline"
           >
             <UnderlineIcon size={14} />
           </button>
@@ -133,9 +200,12 @@ function RichTextEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleStrike().run()}
-            className={`p-2 transition hover:bg-app-hover ${
-              editor.isActive('strike') ? 'bg-app-hover text-general' : 'text-app-text'
+            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+              editor.isActive('strike') 
+                ? 'bg-primary/10 text-primary' 
+                : 'text-app-muted hover:bg-app-hover hover:text-app-text'
             }`}
+            title="Strikethrough"
           >
             <Strikethrough size={14} />
           </button>

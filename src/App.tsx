@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { LayoutGrid, Plus, Menu } from 'lucide-react'
+import { LayoutGrid, Plus, Menu, FileText, CheckSquare, ListTodo, Command } from 'lucide-react'
 import WorkspaceView from './features/workspaces/WorkspaceView'
 import Sidebar from './components/layout/Sidebar'
 import ConfirmDialog from './components/common/ConfirmDialog'
@@ -11,8 +11,10 @@ import { workspaceRepository } from './db/repositories/workspaceRepository'
 
 import type { Workspace } from './types/workspace'
 import type { Page } from './types/page'
+import { useLanguage } from './hooks/useLanguage'
 
 function App() {
+  const { t } = useLanguage()
   const workspaces =
     useLiveQuery(
       () => db.workspaces.orderBy('createdAt').toArray(),
@@ -69,6 +71,18 @@ function App() {
 
   const activePage =
     (pages.find((p: Page) => p.id === activePageId) ?? null)
+
+  const recentPages =
+    useLiveQuery(
+      () => db.pages.orderBy('updatedAt').reverse().limit(5).toArray(),
+      [],
+    ) ?? []
+
+  const overviewStats = {
+    notes: recentPages.filter((page) => page.type === 'note').length,
+    tasks: recentPages.filter((page) => page.type === 'task').length,
+    lists: recentPages.filter((page) => page.type === 'list').length,
+  }
 
   const handleCreateWorkspace = async (
     name: string,
@@ -139,50 +153,70 @@ function App() {
       />
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Top Header */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-app-border bg-white px-3 md:px-5">
-          <div className="flex min-w-0 items-center gap-2">
+        {/* Top Header - Minimalist */}
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-app-border bg-white/80 px-3 backdrop-blur-sm md:px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
             <button
               type="button"
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="mr-1 rounded-md p-1.5 text-app-muted hover:bg-app-hover md:hidden"
+              className="mr-1 flex h-9 w-9 items-center justify-center rounded-lg text-app-muted transition-colors hover:bg-app-hover hover:text-app-text md:hidden"
+              title={t('common.menu')}
             >
               <Menu size={18} />
             </button>
+            
             {activeWorkspace ? (
               <>
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-general text-[11px] font-bold text-white">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-white shadow-sm">
                   {activeWorkspace.name.charAt(0).toUpperCase()}
                 </div>
-                <h2 className="truncate text-sm font-semibold">
-                  {activeWorkspace.name}
-                </h2>
-                <span className="rounded-full bg-app-surface px-2 py-0.5 text-[10px] font-medium text-app-muted">
-                  Workspace
-                </span>
+                <div className="min-w-0">
+                  <h2 className="truncate text-sm font-semibold text-app-text">
+                    {activeWorkspace.name}
+                  </h2>
+                  <p className="text-[11px] text-app-muted">
+                    {t('common.workspace')}
+                  </p>
+                </div>
               </>
             ) : (
-              <div className="flex items-center gap-2">
-                <LayoutGrid size={16} className="text-app-muted" />
-                <h2 className="text-sm font-semibold text-app-muted">
-                  Trang chủ
-                </h2>
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                  <LayoutGrid size={16} className="text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-app-text">
+                    {t('home.title')}
+                  </h2>
+                  <p className="text-[11px] text-app-muted">
+                    {t('app.name')}
+                  </p>
+                </div>
               </div>
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              setWorkspaceModal({
-                mode: 'create',
-              })
-            }
-            className="flex items-center gap-1.5 rounded-lg bg-general px-3.5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-general-dark active:scale-95"
-          >
-            <Plus size={15} />
-            Tạo Workspace
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Keyboard shortcut hint */}
+            <div className="hidden items-center gap-1.5 rounded-lg border border-app-border bg-app-surface px-2.5 py-1.5 text-[11px] text-app-muted lg:flex">
+              <Command size={12} />
+              <span>K</span>
+            </div>
+            
+            <button
+              type="button"
+              onClick={() =>
+                setWorkspaceModal({
+                  mode: 'create',
+                })
+              }
+              className="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-white transition-all hover:bg-primary-dark active:scale-95 sm:px-4"
+              title={t('home.createWorkspace')}
+            >
+              <Plus size={16} />
+              <span className="hidden sm:inline">{t('home.createWorkspace')}</span>
+            </button>
+          </div>
         </header>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -191,39 +225,105 @@ function App() {
               key={activeWorkspace.id}
               workspace={activeWorkspace}
               activePage={activePage}
+              onSelectPage={(pageId) => setActivePageId(pageId || null)}
             />
           ) : (
-            <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-              {/* Decorative background */}
-              <div className="relative">
-                <div className="absolute -inset-8 rounded-full bg-general/5 blur-2xl" />
-                <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-general to-blue-600 text-2xl font-bold text-white shadow-lg shadow-general/30">
-                  W
+            /* Empty State - Welcome */
+            <div className="flex h-full flex-col items-center justify-center overflow-y-auto p-6">
+              <div className="w-full max-w-2xl text-center">
+                {/* Logo/Brand */}
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-white shadow-lg shadow-primary/20">
+                  {t('app.name').charAt(0)}
+                </div>
+
+                <h1 className="mt-6 text-3xl font-semibold tracking-tight text-app-text">
+                  {t('app.name')}
+                </h1>
+
+                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-app-muted">
+                  {t('home.emptyDescription')}
+                </p>
+
+                {/* Stats - Minimal cards */}
+                <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                  <div className="group rounded-xl border border-app-border bg-white p-4 transition-all hover:border-primary/30 hover:shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText size={16} className="text-primary" />
+                        <span className="text-xs font-medium uppercase tracking-wider text-app-muted">
+                          {t('page.type.note')}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 text-3xl font-semibold text-app-text">
+                      {overviewStats.notes}
+                    </div>
+                    <div className="mt-1 text-xs text-app-muted">
+                      {t('home.recentPages')}
+                    </div>
+                  </div>
+
+                  <div className="group rounded-xl border border-app-border bg-white p-4 transition-all hover:border-primary/30 hover:shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckSquare size={16} className="text-primary" />
+                        <span className="text-xs font-medium uppercase tracking-wider text-app-muted">
+                          {t('page.type.task')}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 text-3xl font-semibold text-app-text">
+                      {overviewStats.tasks}
+                    </div>
+                    <div className="mt-1 text-xs text-app-muted">
+                      {t('home.recentPages')}
+                    </div>
+                  </div>
+
+                  <div className="group rounded-xl border border-app-border bg-white p-4 transition-all hover:border-primary/30 hover:shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ListTodo size={16} className="text-primary" />
+                        <span className="text-xs font-medium uppercase tracking-wider text-app-muted">
+                          {t('page.type.list')}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 text-3xl font-semibold text-app-text">
+                      {overviewStats.lists}
+                    </div>
+                    <div className="mt-1 text-xs text-app-muted">
+                      {t('home.recentPages')}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Primary CTA */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setWorkspaceModal({
+                      mode: 'create',
+                    })
+                  }
+                  className="mt-8 inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-6 text-sm font-medium text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary-dark hover:shadow-primary/30 active:scale-95"
+                >
+                  <Plus size={18} />
+                  {t('home.emptyTitle')}
+                </button>
+
+                {/* Quick tips */}
+                <div className="mt-8 flex items-center justify-center gap-4 text-xs text-app-muted">
+                  <span className="flex items-center gap-1.5">
+                    <kbd className="rounded border border-app-border bg-app-surface px-1.5 py-0.5 text-[10px] font-medium">⌘ K</kbd>
+                    {t('common.search')}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <kbd className="rounded border border-app-border bg-app-surface px-1.5 py-0.5 text-[10px] font-medium">⌘ N</kbd>
+                    {t('common.new')}
+                  </span>
                 </div>
               </div>
-
-              <h1 className="mt-6 text-2xl font-semibold tracking-tight">
-                Personal Workspace
-              </h1>
-
-              <p className="mt-2 max-w-xs text-sm leading-6 text-app-muted">
-                Tạo Workspace đầu tiên để bắt đầu
-                quản lý học tập, công việc và hành
-                trình của bạn.
-              </p>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setWorkspaceModal({
-                    mode: 'create',
-                  })
-                }
-                className="mt-6 flex items-center gap-2 rounded-xl bg-general px-5 py-2.5 text-sm font-medium text-white shadow-md shadow-general/25 transition hover:bg-general-dark active:scale-95"
-              >
-                <Plus size={16} />
-                Tạo Workspace đầu tiên
-              </button>
             </div>
           )}
         </div>
@@ -233,16 +333,16 @@ function App() {
         open={workspaceModal !== null}
         title={
           workspaceModal?.mode === 'edit'
-            ? 'Đổi tên Workspace'
-            : 'Tạo Workspace mới'
+            ? t('common.rename')
+            : t('workspace.create')
         }
         initialName={
           workspaceModal?.workspace?.name ?? ''
         }
         submitText={
           workspaceModal?.mode === 'edit'
-            ? 'Lưu thay đổi'
-            : 'Tạo Workspace'
+            ? t('common.save')
+            : t('home.createWorkspace')
         }
         onClose={() => setWorkspaceModal(null)}
         onSubmit={
@@ -254,10 +354,8 @@ function App() {
 
       <ConfirmDialog
         open={workspaceToDelete !== null}
-        title="Xóa Workspace?"
-        description={`Workspace "${
-          workspaceToDelete?.name ?? ''
-        }" và toàn bộ dữ liệu bên trong sẽ bị xóa vĩnh viễn.`}
+        title={t('common.delete')}
+        description={`${workspaceToDelete?.name ?? ''} - ${t('common.delete')}`}
         onClose={() => setWorkspaceToDelete(null)}
         onConfirm={handleDeleteWorkspace}
       />
