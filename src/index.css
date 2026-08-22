@@ -623,16 +623,39 @@ aside .custom-scrollbar::-webkit-scrollbar-thumb {
 
 /* ─── Responsive Helpers ─── */
 @media (max-width: 768px) {
+  .app-form-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.25rem;
+  }
+
   .app-form-input,
   .app-form-select,
   .app-form-textarea {
+    padding: 0.625rem 0.75rem;
     font-size: 1rem; /* Prevent iOS zoom on focus */
+    border-radius: 0.75rem;
+  }
+
+  .modal-overlay {
+    padding: 0.75rem;
+  }
+
+  .modal-content {
+    max-width: 100%;
+    border-radius: 0.875rem;
   }
 
   .app-primary-action,
   .app-secondary-action,
   .app-danger-action {
     min-height: 2.75rem; /* Better touch targets */
+    padding: 0.625rem 0.875rem;
+  }
+
+  .ProseMirror {
+    min-height: 140px;
+    padding: 0.75rem 0.875rem;
   }
 }
 
